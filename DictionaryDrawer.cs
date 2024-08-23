@@ -8,6 +8,8 @@ using System.Reflection;
 public abstract class DictionaryDrawer<TK, TV> : PropertyDrawer
 {
     private Dictionary<TK, TV> _Dictionary;
+    // The UnityObject this PropertyDrawer is drawing. It is set in OnGUI and is used in other methods.
+    private UnityObject targetObject;
     private bool _Foldout;
     private const float kButtonWidth = 18f;
     private static float lineHeight = EditorGUIUtility.singleLineHeight + 4;
@@ -46,7 +48,11 @@ public abstract class DictionaryDrawer<TK, TV> : PropertyDrawer
 
 
         if (!_Foldout)
+        {
+            targetObject = null;
             return;
+        }
+
         position.y += 5f + lineHeight * 2;
         foreach (var item in _Dictionary)
         {
@@ -68,10 +74,12 @@ public abstract class DictionaryDrawer<TK, TV> : PropertyDrawer
                 {
                     _Dictionary.Remove(key);
                     _Dictionary.Add(newKey, value);
+                    MarkDirty();
                 }
                 catch (Exception e)
                 {
                     _Dictionary.Remove(key);
+                    MarkDirty();
                     Debug.Log(e.Message);
                 }
                 break;
@@ -93,6 +101,7 @@ public abstract class DictionaryDrawer<TK, TV> : PropertyDrawer
             if (EditorGUI.EndChangeCheck())
             {
                 _Dictionary[key] = value;
+                MarkDirty();
                 break;
             }
             EditorGUIUtility.AddCursorRect(changeValueRect, MouseCursor.Link);
@@ -108,6 +117,8 @@ public abstract class DictionaryDrawer<TK, TV> : PropertyDrawer
             EditorGUIUtility.AddCursorRect(removeRect, MouseCursor.Link);
             position.y += Mathf.Max(GetEntryHeight(key) ,GetEntryHeight(value));
         }
+
+        targetObject = null;
     }
 
     /// <summary>
@@ -319,25 +330,25 @@ private TV ChangeValueType(Rect rect, TK key, TV value)
         if (GUI.Button(rect, content, changeItemStyle))
         {
             GenericMenu genericMenu = new GenericMenu();
-            genericMenu.AddItem(new GUIContent("Numbers/int"), value is int, () => { _Dictionary[key] = (TV)(object)default(int); });
-            genericMenu.AddItem(new GUIContent("Numbers/float"), value is float, () => { _Dictionary[key] = (TV)(object)default(float); });
-            genericMenu.AddItem(new GUIContent("Numbers/double"), value is double, () => { _Dictionary[key] = (TV)(object)default(double); });
-            genericMenu.AddItem(new GUIContent("Numbers/long"), value is long, () => { _Dictionary[key] = (TV)(object)default(long); });
-            genericMenu.AddItem(new GUIContent("Vectors/Vector2"), (value is Vector2 && !(value is Vector2Int)), () => { _Dictionary[key] = (TV)(object)default(Vector2); });
-            genericMenu.AddItem(new GUIContent("Vectors/Vector3"), (value is Vector3 && !(value is Vector3Int)), () => { _Dictionary[key] = (TV)(object)default(Vector3); });
-            genericMenu.AddItem(new GUIContent("Vectors/Vector4"), value is Vector4, () => { _Dictionary[key] = (TV)(object)default(Vector4); });
-            genericMenu.AddItem(new GUIContent("Vectors/Vector2Int"), value is Vector2Int, () => { _Dictionary[key] = (TV)(object)default(Vector2Int); });
-            genericMenu.AddItem(new GUIContent("Vectors/Vector3Int"), value is Vector3Int, () => { _Dictionary[key] = (TV)(object)default(Vector3Int); });
-            genericMenu.AddItem(new GUIContent("Bounds/Bounds"), value is Bounds && value is not BoundsInt, () => { _Dictionary[key] = (TV)(object)default(Bounds); });
-            genericMenu.AddItem(new GUIContent("Bounds/BoundsInt"), value is BoundsInt, () => { _Dictionary[key] = (TV)(object)default(BoundsInt); });
-            genericMenu.AddItem(new GUIContent("Rects/Rect"), value is Rect && value is not RectInt, () => { _Dictionary[key] = (TV)(object)default(Rect); });
-            genericMenu.AddItem(new GUIContent("Rects/RectInt"), value is RectInt, () => { _Dictionary[key] = (TV)(object)default(RectInt); });
-            genericMenu.AddItem(new GUIContent("string"), value is string, () => { _Dictionary[key] = (TV)(object)""; });
-            genericMenu.AddItem(new GUIContent("bool"), value is bool, () => { _Dictionary[key] = (TV)(object)default(bool); });
-            genericMenu.AddItem(new GUIContent("Color"), value is Color, () => { _Dictionary[key] = (TV)(object)default(Color); });
-            genericMenu.AddItem(new GUIContent("AnimationCurve"), value is AnimationCurve, () => { _Dictionary[key] = (TV)(object)(new AnimationCurve()); });
-            genericMenu.AddItem(new GUIContent("Gradient"), value is Gradient, () => { _Dictionary[key] = (TV)(object)(new Gradient()); });
-            genericMenu.AddItem(new GUIContent("Unity Object"), value is UnityObject, () => { _Dictionary[key] = (TV)(object)(new UnityObject()); });
+            genericMenu.AddItem(new GUIContent("Numbers/int"), value is int, () => { _Dictionary[key] = (TV)(object)default(int); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Numbers/float"), value is float, () => { _Dictionary[key] = (TV)(object)default(float); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Numbers/double"), value is double, () => { _Dictionary[key] = (TV)(object)default(double); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Numbers/long"), value is long, () => { _Dictionary[key] = (TV)(object)default(long); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Vectors/Vector2"), (value is Vector2 && !(value is Vector2Int)), () => { _Dictionary[key] = (TV)(object)default(Vector2); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Vectors/Vector3"), (value is Vector3 && !(value is Vector3Int)), () => { _Dictionary[key] = (TV)(object)default(Vector3); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Vectors/Vector4"), value is Vector4, () => { _Dictionary[key] = (TV)(object)default(Vector4); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Vectors/Vector2Int"), value is Vector2Int, () => { _Dictionary[key] = (TV)(object)default(Vector2Int); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Vectors/Vector3Int"), value is Vector3Int, () => { _Dictionary[key] = (TV)(object)default(Vector3Int); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Bounds/Bounds"), value is Bounds && value is not BoundsInt, () => { _Dictionary[key] = (TV)(object)default(Bounds); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Bounds/BoundsInt"), value is BoundsInt, () => { _Dictionary[key] = (TV)(object)default(BoundsInt); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Rects/Rect"), value is Rect && value is not RectInt, () => { _Dictionary[key] = (TV)(object)default(Rect); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Rects/RectInt"), value is RectInt, () => { _Dictionary[key] = (TV)(object)default(RectInt); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("string"), value is string, () => { _Dictionary[key] = (TV)(object)""; MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("bool"), value is bool, () => { _Dictionary[key] = (TV)(object)default(bool); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Color"), value is Color, () => { _Dictionary[key] = (TV)(object)default(Color); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("AnimationCurve"), value is AnimationCurve, () => { _Dictionary[key] = (TV)(object)(new AnimationCurve()); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Gradient"), value is Gradient, () => { _Dictionary[key] = (TV)(object)(new Gradient()); MarkDirty(); });
+            genericMenu.AddItem(new GUIContent("Unity Object"), value is UnityObject, () => { _Dictionary[key] = (TV)(object)(new UnityObject()); MarkDirty(); });
             genericMenu.ShowAsContext();
         }
 
@@ -348,22 +359,46 @@ private TV ChangeValueType(Rect rect, TK key, TV value)
     private void RemoveItem(TK key)
     {
         _Dictionary.Remove(key);
+        MarkDirty();
     }
 
     private void CheckInitialize(SerializedProperty property, GUIContent label)
     {
+        targetObject = property.serializedObject.targetObject;
         if (_Dictionary == null)
         {
             SetupStyles();
-            var target = property.serializedObject.targetObject;
-            _Dictionary = fieldInfo.GetValue(target) as Dictionary<TK, TV>;
+            _Dictionary = fieldInfo.GetValue(targetObject) as Dictionary<TK, TV>;
             if (_Dictionary == null)
             {
                 _Dictionary = new Dictionary<TK, TV>();
-                fieldInfo.SetValue(target, _Dictionary);
+                fieldInfo.SetValue(targetObject, _Dictionary);
             }
 
             _Foldout = EditorPrefs.GetBool(label.text);
+        }
+    }
+    
+    /// <summary>
+    /// Marks the target object as dirty, so that changes persist.
+    /// </summary>
+    private void MarkDirty()
+    {
+        try
+        {
+            Debug.Log($"{targetObject == null} || {_Dictionary == null}");
+            if (targetObject == null || _Dictionary == null) return; // If the target object or dictionary is null, return. Something isn't intialized properly.
+                
+            Debug.Log("Marking dirty");
+            
+            // Marks the target object as dirty. This will update scenes and prefabs.
+            EditorUtility.SetDirty(targetObject); 
+            // If the target is in a prefab override, this will record the changes.
+            PrefabUtility.RecordPrefabInstancePropertyModifications(targetObject); 
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.Message);
         }
     }
 
@@ -394,6 +429,7 @@ private TV ChangeValueType(Rect rect, TK key, TV value)
     private void ClearDictionary()
     {
         _Dictionary.Clear();
+        MarkDirty();
     }
 
     private void AddNewItem()
@@ -409,6 +445,7 @@ private TV ChangeValueType(Rect rect, TK key, TV value)
             try
             {
                 _Dictionary.Add(key, value);
+                MarkDirty();
             }
             catch (Exception e)
             {
@@ -421,6 +458,7 @@ private TV ChangeValueType(Rect rect, TK key, TV value)
             try
             {
                 _Dictionary.Add(key, value);
+                MarkDirty();
             }
             catch (Exception e)
             {

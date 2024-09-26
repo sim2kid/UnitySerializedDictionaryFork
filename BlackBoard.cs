@@ -93,7 +93,10 @@ public class Blackboard : Dictionary<string, object>, ISerializationCallbackRece
                 case AnimationCurve: encode = "(AnimationCurve)" + Serializer.SerializeAnimationCurve((AnimationCurve)value); break;
                 case Gradient: encode = "(Gradient)" + Serializer.SerializeGradient((Gradient)value); break;
                 case UnityEngine.Object obj:
-                    string assetPath = Application.isEditor ? AssetDatabase.GetAssetPath(obj) : null;
+                    string assetPath = null;
+#if UNITY_EDITOR
+                    assetPath = Application.isEditor ? AssetDatabase.GetAssetPath(obj) : null;
+#endif
                     if (!string.IsNullOrEmpty(assetPath))
                     {
                         encode = "(UnityEngine.Object)" + assetPath;
@@ -187,11 +190,10 @@ public class Blackboard : Dictionary<string, object>, ISerializationCallbackRece
             case "AnimationCurve": Add(key, Serializer.DeserializeAnimationCurve(encodedValue)); return;
             case "Gradient": Add(key, Serializer.DeserializeGradient(encodedValue)); return;
             case "UnityEngine.Object":
-                if(Application.isEditor)
-                {
-                    EditorApplication.delayCall += () => Add(key, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(encodedValue));
-                }
-                else
+#if UNITY_EDITOR
+                EditorApplication.delayCall += () => Add(key, AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(encodedValue));
+#endif
+                if(!Application.isEditor)
                 {
                     Add(key, Resources.Load(encodedValue));
                 }        
